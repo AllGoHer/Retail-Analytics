@@ -480,8 +480,7 @@ bash:
       silver_df = silver_df.withColumn(
       "payment_type",
       when(col("payment_type").isin("Card", "UPI", "COD"), col("payment_type"))
-      .otherwise(None)
-  )
+      .otherwise(None))
 
 Luego guardamos los datos silver (limpios) en formato parquet.
 
