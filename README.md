@@ -522,8 +522,7 @@ bash:
 
       silver_df = silver_df.withColumn(
       "total_amount",
-      round(col("quantity") * col("unit_price") * (1 - col("discount_pct") / 100), 2)
-  )
+      round(col("quantity") * col("unit_price") * (1 - col("discount_pct") / 100), 2))
 
 Luego vemos las ventas diarias y agrupados por fechas de pedidos.
 
@@ -535,9 +534,7 @@ bash:
       .agg(
           round(sum("total_amount"), 2).alias("total_revenue"),
           count("transaction_id").alias("total_orders"),
-          round(avg("total_amount"), 2).alias("avg_order_value")
-      )
-  )
+          round(avg("total_amount"), 2).alias("avg_order_value")))
 
 Ahora guardamos los datos gold en formato parquet.
 
@@ -552,15 +549,7 @@ Ahora agrupamos por categoría de productos.
 
 bash:
 
-      product_perf_df = (
-  ...     silver_df
-  ...     .groupBy("product_category")
-  ...     .agg(
-  ...         round(sum("total_amount"), 2).alias("category_revenue"),
-  ...         sum("quantity").alias("total_units_sold"),
-  ...         count("transaction_id").alias("order_count")
-  ...     )
-  ... )
+      product_perf_df = (silver_df.groupBy("product_category").agg(round(sum("total_amount"), 2).alias("category_revenue"), sum("quantity").alias("total_units_sold"), count("transaction_id").alias("order_count")))
 
 
 Ahora creamos otro archivo de categoría de productos.
