@@ -92,7 +92,7 @@ Ve a tu Docker Desktop y haz clic en la pestaña "Containers" (o "Containers / A
 
 ![image](https://github.com/user-attachments/assets/1779b925-94d7-4644-bc3c-dfab24675def)
 
-# ETAPA FUENTE DE DATOS
+## ETAPA FUENTE DE DATOS
 _____________________________________________________________________________________________________________________________________________________________________________________________________________________________
 
 Generamos un archivo de datos crudos (generate_raw_data.py)
