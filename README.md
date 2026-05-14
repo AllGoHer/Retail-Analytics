@@ -471,15 +471,127 @@ bash:
       silver_df.filter(~col("payment_type").isin("Card", "UPI", "COD")).show(5)
 
 
-![image]()
+![image](https://github.com/user-attachments/assets/a25dfe62-ea13-4fcc-bd89-676e637a78d0)
 
-![image]()
+Ahora eliminamos el tipo de pago
 
-![image]()
+bash:
 
-![image]()
+      silver_df = silver_df.withColumn(
+      "payment_type",
+      when(col("payment_type").isin("Card", "UPI", "COD"), col("payment_type"))
+      .otherwise(None)
+  )
 
-![image]()
+Luego guardamos los datos silver (limpios) en formato parquet.
 
+bash:
+
+      silver_df.write.mode("overwrite").parquet("/opt/spark-data/silver/retail_silver_clean.parquet")
+
+
+![image](https://github.com/user-attachments/assets/010d0652-1d89-4995-b691-f1a765db190a)
+
+bash:
+
+      print("Silver count:", silver_df.count())
+
+![image](https://github.com/user-attachments/assets/df2bcdfd-a2aa-449f-a711-3cd3ab81ebda)
+
+## ETAPA GOLD
+_____________________________________________________________________________________________________________________________________________________________________________________________________________________________
+
+Importamos las funciones.
+
+bash:
+
+      from pyspark.sql.functions import col, sum, count, avg, round
+
+bash:
+
+      silver_df = spark.read.parquet("/opt/spark-data/silver/retail_silver_clean.parquet")
+
+bash:
+
+      silver_df.show(5)
+
+![image](https://github.com/user-attachments/assets/5187ddde-6242-4913-8bf8-bcf455c3442d)
+
+Ahora creamos una columna adicional que muestre el monto total.
+
+bash:
+
+      silver_df = silver_df.withColumn(
+      "total_amount",
+      round(col("quantity") * col("unit_price") * (1 - col("discount_pct") / 100), 2)
+  )
+
+Luego vemos las ventas diarias y agrupados por fechas de pedidos.
+
+bash:
+
+      daily_sales_df = (
+      silver_df
+      .groupBy("order_date")
+      .agg(
+          round(sum("total_amount"), 2).alias("total_revenue"),
+          count("transaction_id").alias("total_orders"),
+          round(avg("total_amount"), 2).alias("avg_order_value")
+      )
+  )
+
+Ahora guardamos los datos gold en formato parquet.
+
+bash:
+
+      daily_sales_df.write.mode("overwrite").parquet("/opt/spark-data/gold/daily_sales_metrics.parquet")
+
+
+![image](https://github.com/user-attachments/assets/c3d7dadd-e8e7-48fb-b51a-906919c1322b)
+
+Ahora agrupamos por categoría de productos.
+
+bash:
+
+      product_perf_df = (
+  ...     silver_df
+  ...     .groupBy("product_category")
+  ...     .agg(
+  ...         round(sum("total_amount"), 2).alias("category_revenue"),
+  ...         sum("quantity").alias("total_units_sold"),
+  ...         count("transaction_id").alias("order_count")
+  ...     )
+  ... )
+
+
+Ahora creamos otro archivo de categoría de productos.
+
+bash:
+
+      product_perf_df.write.mode("overwrite").parquet("/opt/spark-data/gold/product_category_performance.parquet")
+
+
+![image](https://github.com/user-attachments/assets/38d7acbf-242d-4710-82df-55e91c9c0409)
+
+Indicadores de ingresos a nivel de ciudad.
+
+bash:
+
+      city_revenue_df = (silver_df.groupBy("city", "state").agg(round(sum("total_amount"), 2).alias("city_revenue"), count("transaction_id").alias("order_count"), round(avg("total_amount"), 2).alias("avg_order_value")))
+
+Ahora creamos la carpeta ingresos por ciudad.
+
+bash:
+
+      city_revenue_df.write.mode("overwrite").parquet("/opt/spark-data/gold/city_revenue_metrics.parquet")
+
+![image](https://github.com/user-attachments/assets/e07a5cb0-464d-40c8-99f6-3fe8affd6d98)
+
+## CREACION DE DASHBOARD
+_____________________________________________________________________________________________________________________________________________________________________________________________________________________________
+
+Vamos a Power BI
+
+![image](https://github.com/user-attachments/assets/810551d2-12f1-48d5-a7fc-e7f01d107b69)
 
 
