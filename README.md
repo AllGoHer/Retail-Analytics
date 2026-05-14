@@ -289,7 +289,187 @@ bash:
      StructField("ingestion_date", DateType(), True)]))
 
 
-![image]()
+![image](https://github.com/user-attachments/assets/d88c5b33-2362-4bd3-ac47-b88f110def39)
+
+Ahora creamos el DataFrame bronce.
+
+bash:
+
+     bronze_df = spark.read.option("header", "true").schema(bronze_schema).csv("/opt/spark-data/raw/retail_sales_raw.csv")
+
+
+![image](https://github.com/user-attachments/assets/2bbe3480-5e6d-43af-a189-963b1115b695)
+
+Luego para confirmar el proceso hacemos lo siguiente.
+
+bash:
+
+     bronze_df.count()
+
+
+![image](https://github.com/user-attachments/assets/dd39b81f-0df5-4a43-a65e-732a7d3bb019)
+
+Ahora imprimiremos el esquema del DataFrame
+
+bash:
+
+      bronze_df.printSchema()
+
+      
+![image](https://github.com/user-attachments/assets/996598f4-01a0-44ea-adfc-4afb236557b4)
+
+Luego escribimos los datos en formato parquet
+
+bash:
+
+     bronze_df.write.mode("overwrite").parquet("/opt/spark-data/bronze/retail_sales_bronze.parquet")
+
+![image](https://github.com/user-attachments/assets/1509aee1-29e6-4fed-927e-b6e8aa2e958c)
+
+Para observar como proceso los datos vamos a Spark UI (localhost:4040)
+
+![image](https://github.com/user-attachments/assets/468cf76d-ce2d-4b43-900d-7cc8186e6b04)
+
+Realizo 4 particiones
+
+![image](https://github.com/user-attachments/assets/5b12db63-de51-409a-851d-e89fcc833486)
+
+![image](https://github.com/user-attachments/assets/e2439ab4-8bef-4af2-a643-7996ece62d7f)
+
+## ETAPA SILVER (Cleaned Data)
+_____________________________________________________________________________________________________________________________________________________________________________________________________________________________
+
+Importamos las librerías de funciones de PySpark 
+
+bash:
+
+      from pyspark.sql.functions import col, when, trim
+
+bash:
+
+      bronze_df = spark.read.parquet("/opt/spark-data/bronze/retail_sales_bronze.parquet")
+
+Ahora agrupamos por transaction_id., contamos y filtramos por columnas mayores que 1, y solo mostramos los top 5 filas.
+
+bash:
+
+      bronze_df.groupby("transaction_id").count().filter(col("count") > 1).show(5, truncate=False)
+
+![image](https://github.com/user-attachments/assets/c07a5e2f-ecc5-41a4-a765-8685649ac11b)
+
+En este proceso eliminamos los duplicados por “transaction_id”
+
+bash: 
+
+     silver_df = bronze_df.dropDuplicates(["transaction_id"])
+
+bash:
+
+      silver_df.count()
+
+![image](https://github.com/user-attachments/assets/a4481438-9c86-45dd-bbf9-fc0b8930d1eb)
+
+•	Correcciones en fecha de envío.
+
+Lo que hará es filtrar por columna de fecha de envío y que la fecha de envío sea menor a la fecha de pedidos y que muestre top 5
+
+bash: 
+
+      bronze_df.filter(col("ship_date") < col("order_date")).show(5)
+
+
+![image](https://github.com/user-attachments/assets/8cecb16e-6a49-405b-b041-6e5a5358303a)
+
+Ahora creamos otra columna en “silver_df”
+
+Se creará una nueva columna, asignando las nuevas fechas de envío que ya están limpias. Para ello Nombrara la nueva columna como fecha de envío, cuando se llame a la fecha de envío se menor a la fecha de pedido solicitada, pues ahora cambiaremos esos datos y los remplazamos por None y los restos de datos deberán ser igual a los de la fecha de envío. 
+
+bash: 
+
+      silver_df = silver_df.withColumn("ship_date", when(col("ship_date") < col("order_date"), None).otherwise(col("ship_date")))
+
+Luego tenemos que verificar que ninguno de los datos sean igual a 0
+
+bash:
+
+     silver_df.filter(col("quantity") <= 0).show(5)
+
+![image](https://github.com/user-attachments/assets/50a24473-f6b8-4620-8c58-4a8c11e835c8)
+
+Ahora limpiaremos estos datos
+
+bash:
+
+      silver_df = silver_df.filter(col("quantity") > 0)
+      
+Luego buscamos valores con precio unitarios falsos.
+
+bash:
+
+      silver_df.filter(col("unit_price") <= 0).show(5)
+
+
+![image](https://github.com/user-attachments/assets/0626b656-2ba0-4913-8b69-602623036f93)
+
+Ahora filtramos todos los precios unitarios con valores negativos, pero vamos a filtrarlos y asignarles valores nulos para no perder registro adicional.
+
+bash:
+
+      silver_df = silver_df.withColumn("unit_price", when(col("unit_price") <= 0, None).otherwise(col("unit_price")))
+
+En el siguiente proceso toca ver el descuento que sean mayores que 100.
+
+bash:
+
+     silver_df.filter(col("discount_pct") > 100).show(5)
+
+![image](https://github.com/user-attachments/assets/67d67130-7515-48bc-b307-5d9df7d3327f)
+
+bash:
+
+      silver_df = silver_df.withColumn("discount_pct", when((col("discount_pct") < 0) | (col("discount_pct") > 100), None).otherwise(col("discount_pct")))
+
+      
+Ahora filtramos por edad
+
+bash:
+
+      silver_df.filter((col("customer_age") < 15) | (col("customer_age") > 100)).show(5)
+
+
+![image](https://github.com/user-attachments/assets/5cbf4578-8082-492c-b9d4-2823aed10d24)
+
+bash:
+
+       silver_df = silver_df.withColumn("customer_age", when((col("customer_age") < 15) | (col("customer_age") > 100), None).otherwise(col("customer_age")))
+
+Ahora agrupamos por genero
+
+bash:
+
+     silver_df.groupBy("gender").count().show()
+
+
+![image](https://github.com/user-attachments/assets/50747b14-3cea-4232-8b63-522708b9274c)
+
+Luego tenemos designar solo femenino y masculino
+
+bash:
+
+      silver_df = silver_df.withColumn(
+      "gender",
+      when(upper(trim(col("gender"))) == "MALE", "M")
+      .when(upper(trim(col("gender"))) == "FEMALE", "F")
+      .when(col("gender").isin("M", "F"), col("gender"))
+      .otherwise(None)
+       )
+
+Ahora vemos el tipo de pago y eliminar las criptomonedas o tipo de moneda Falso.
+
+bash:
+
+      silver_df.filter(~col("payment_type").isin("Card", "UPI", "COD")).show(5)
+
 
 ![image]()
 
