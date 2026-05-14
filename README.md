@@ -232,7 +232,74 @@ Código:
         print(f"✅ Generated {NUM_RECORDS} records at:\n{file_path}")
 
 
+![image](https://github.com/user-attachments/assets/d52e9238-33ac-405e-a369-c5e805f6ee13)
 
+Luego en consola ejecutamos el siguiente comando
+Python generate_raw_data.py
+
+![image](https://github.com/user-attachments/assets/a031c5cc-fff0-4e91-a614-57be6918d6c5)
+
+El cual generará el archivo de datos con cual trabajaremos.
+
+![image](https://github.com/user-attachments/assets/955d04ef-ae19-4fcc-aec0-a9a0bc987040)
+
+Hacemos la chispa PySpark en consola.
+
+Luego en la terminal:
+ 
+                      docker exec -it spark-worker-1 /opt/spark/bin/pyspark --master spark://spark-master:7077
+
+![image](https://github.com/user-attachments/assets/529f95af-7bac-4ba5-af89-d5defec8f8a9)
+
+Ahora vamos a Spark UI:
+
+![image](https://github.com/user-attachments/assets/9cb47184-9ba7-4964-8766-c740695b3dbb)
+
+Luego vamos al otro puerto (localhost:4040)
+
+![image](https://github.com/user-attachments/assets/3ef9089c-8788-4188-a3c1-6a814d55de87)
+
+## ETAPA BRONCE (Raw Data)
+____________________________________________________________________________________________________________________________________________________________________________________________________________________________
+
+En la terminal escribimos el siguiente comando para importar las librerías
+
+bash:
+
+     from pyspark.sql.types import(StructType, StructField, IntegerType, StringType, DoubleType, DateType)
+
+bash:
+
+     bronze_schema = (StructType([
+     StructField("transaction_id", IntegerType(), True),  
+     StructField("order_date", DateType(), True), 
+     StructField("ship_date", DateType(), True), 
+     StructField("customer_id", StringType(), True), 
+     StructField("customer_age", IntegerType(), True), 
+     StructField("gender", StringType(), True), 
+     StructField("product_id", StringType(), True),
+     StructField("product_category", StringType(), True), 
+     StructField("quantity", IntegerType(), True),
+     StructField("unit_price", DoubleType(), True), 
+     StructField("discount_pct", DoubleType(), True), 
+     StructField("city", StringType(), True), 
+     StructField("state", StringType(), True), 
+     StructField("payment_type", StringType(), True), 
+     StructField("order_status", StringType(), True), 
+     StructField("ingestion_date", DateType(), True)]))
+
+
+![image]()
+
+![image]()
+
+![image]()
+
+![image]()
+
+![image]()
+
+![image]()
 
 
 
